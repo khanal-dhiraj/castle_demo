@@ -1,26 +1,163 @@
-// Smoke test — one agent, one sandbox, one tiny task.
+// Parallel Planner with Review — four-phase orchestration loop
+//
+//   Phase 1 (Plan):             Opus reads open issues, builds a dependency
+//                               graph, emits a <plan> JSON of unblocked issues.
+//   Phase 2 (Execute + Review): Per issue, createSandbox() then implementer
+//                               (up to 100 iters) → reviewer (1 iter) on the
+//                               same branch. Issues run concurrently via
+//                               Promise.allSettled.
+//   Phase 3 (Merge):            One agent merges completed branches back into
+//                               the current branch and closes the issues.
+//
+// Outer loop repeats up to MAX_ITERATIONS so newly unblocked issues are picked
+// up after each round of merges.
+//
 // Usage: npx tsx .sandcastle/main.mts
 
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 
-const result = await sandcastle.run({
-  agent: sandcastle.claudeCode("claude-sonnet-4-6"),
-  sandbox: docker(),
-  branchStrategy: { type: "branch", branch: "sandcastle/hello-demo" },
-  name: "hello-demo",
-  prompt: [
-    "Create a file named hello.txt in the current directory.",
-    "Its contents should be a single line: a friendly one-sentence greeting from the agent.",
-    "Then run `git add hello.txt && git commit -m 'add hello.txt'`.",
-    "When the commit is done, output <promise>COMPLETE</promise> on its own line.",
-  ].join("\n"),
-  // Default file logging writes to .sandcastle/logs/<run>.log
-});
+const MAX_ITERATIONS = 10;
 
-console.log("\n--- Run result ---");
-console.log("Branch:           ", result.branch);
-console.log("Iterations:       ", result.iterations.length);
-console.log("Completion signal:", result.completionSignal);
-console.log("Commits:          ", result.commits);
-console.log("Log file:         ", result.logFilePath);
+const hooks = {
+  sandbox: { onSandboxReady: [{ command: "npm install" }] },
+};
+
+const copyToWorktree = ["node_modules"];
+
+for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
+  console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
+
+  // Phase 1: Plan
+  const plan = await sandcastle.run({
+    hooks,
+    sandbox: docker(),
+    name: "planner",
+    maxIterations: 1,
+    agent: sandcastle.claudeCode("claude-opus-4-7"),
+    promptFile: "./.sandcastle/plan-prompt.md",
+  });
+
+  const planMatch = plan.stdout.match(/<plan>([\s\S]*?)<\/plan>/);
+  if (!planMatch) {
+    throw new Error(
+      "Planning agent did not produce a <plan> tag.\n\n" + plan.stdout,
+    );
+  }
+
+  const { issues } = JSON.parse(planMatch[1]!) as {
+    issues: { id: string; title: string; branch: string }[];
+  };
+
+  if (issues.length === 0) {
+    console.log("No unblocked issues to work on. Exiting.");
+    break;
+  }
+
+  console.log(
+    `Planning complete. ${issues.length} issue(s) to work in parallel:`,
+  );
+  for (const issue of issues) {
+    console.log(`  ${issue.id}: ${issue.title} → ${issue.branch}`);
+  }
+
+  // Phase 2: Execute + Review
+  const settled = await Promise.allSettled(
+    issues.map(async (issue) => {
+      const sandbox = await sandcastle.createSandbox({
+        branch: issue.branch,
+        sandbox: docker(),
+        hooks,
+        copyToWorktree,
+      });
+
+      try {
+        const implement = await sandbox.run({
+          name: "implementer",
+          maxIterations: 100,
+          agent: sandcastle.claudeCode("claude-opus-4-7"),
+          promptFile: "./.sandcastle/implement-prompt.md",
+          promptArgs: {
+            TASK_ID: issue.id,
+            ISSUE_TITLE: issue.title,
+            BRANCH: issue.branch,
+          },
+        });
+
+        if (implement.commits.length > 0) {
+          const review = await sandbox.run({
+            name: "reviewer",
+            maxIterations: 1,
+            agent: sandcastle.claudeCode("claude-opus-4-7"),
+            promptFile: "./.sandcastle/review-prompt.md",
+            promptArgs: {
+              ISSUE_NUMBER: issue.id,
+              ISSUE_TITLE: issue.title,
+              BRANCH: issue.branch,
+            },
+          });
+
+          return {
+            ...review,
+            commits: [...implement.commits, ...review.commits],
+          };
+        }
+
+        return implement;
+      } finally {
+        await sandbox.close();
+      }
+    }),
+  );
+
+  for (const [i, outcome] of settled.entries()) {
+    if (outcome.status === "rejected") {
+      console.error(
+        `  ✗ ${issues[i]!.id} (${issues[i]!.branch}) failed: ${outcome.reason}`,
+      );
+    }
+  }
+
+  const completedIssues = settled
+    .map((outcome, i) => ({ outcome, issue: issues[i]! }))
+    .filter(
+      (entry) =>
+        entry.outcome.status === "fulfilled" &&
+        entry.outcome.value.commits.length > 0,
+    )
+    .map((entry) => entry.issue);
+
+  const completedBranches = completedIssues.map((i) => i.branch);
+
+  console.log(
+    `\nExecution complete. ${completedBranches.length} branch(es) with commits:`,
+  );
+  for (const branch of completedBranches) {
+    console.log(`  ${branch}`);
+  }
+
+  if (completedBranches.length === 0) {
+    console.log("No commits produced. Nothing to merge.");
+    continue;
+  }
+
+  // Phase 3: Merge
+  await sandcastle.run({
+    hooks,
+    sandbox: docker(),
+    name: "merger",
+    maxIterations: 1,
+    agent: sandcastle.claudeCode("claude-opus-4-7"),
+    promptFile: "./.sandcastle/merge-prompt.md",
+    promptArgs: {
+      BRANCHES: completedBranches.map((b) => `- ${b}`).join("\n"),
+      ISSUES: completedIssues
+        .map((i) => `- ${i.id}: ${i.title}`)
+        .join("\n"),
+    },
+  });
+
+  console.log("\nBranches merged.");
+}
+
+console.log("\nAll done.");

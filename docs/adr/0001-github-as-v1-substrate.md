@@ -1,0 +1,3 @@
+# GitHub as v1 issue-tracker substrate
+
+Insta-engineer's skills (`to-prd`, `to-issues`, `triage`, `tdd`) are substrate-pluggable, and Linear MCP is wired up — so Linear was a real alternative. We picked GitHub for v1 because (1) the existing scaffold already uses `gh issue list/view/close`, so porting cost is zero; (2) PRs are the deliverable, and colocating issues + PRs gives reviewers one URL; (3) Linear's richer state machine (projects, cycles, initiatives) only pays off once there's enough work in flight to need it, which isn't the demo's situation. Porting to Linear later is roughly a day's work per the project owner — small enough that designing a pluggable abstraction now (with only one real consumer) would be premature.
