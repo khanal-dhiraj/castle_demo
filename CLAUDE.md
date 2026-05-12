@@ -17,7 +17,7 @@ npx sandcastle docker build-image
 npx tsx .sandcastle/main.mts
 ```
 
-`npm test` is a placeholder that exits 1, and there is no `npm run typecheck`. The implementer/reviewer/merge prompts tell agents to run those commands — they will fail until real scripts are wired up. Treat that as a known gap, not a bug to fix unless asked.
+`npm test` and `npm run typecheck` are stub scripts that print a placeholder and exit 0, so the prompt steps that run them are real (not pretend). Wiring in real test/typecheck infrastructure is each adopter's responsibility.
 
 Secrets live in `.sandcastle/.env` (`ANTHROPIC_API_KEY`, `GH_TOKEN`). `.sandcastle/.env` is gitignored; `.env.example` is the template.
 
