@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "tsx src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -19,6 +20,7 @@
   },
   "homepage": "https://github.com/khanal-dhiraj/castle_demo#readme",
   "devDependencies": {
-    "@ai-hero/sandcastle": "^0.5.10"
+    "@ai-hero/sandcastle": "^0.5.10",
+    "tsx": "^4.21.0"
   }
 }
