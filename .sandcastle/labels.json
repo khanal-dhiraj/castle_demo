@@ -1,0 +1,58 @@
+{
+  "categories": [
+    {
+      "name": "bug",
+      "color": "D73A4A",
+      "description": "Something isn't working as intended."
+    },
+    {
+      "name": "enhancement",
+      "color": "A2EEEF",
+      "description": "New feature or improvement to existing behavior."
+    }
+  ],
+  "triageStates": [
+    {
+      "name": "needs-triage",
+      "color": "BFD4F2",
+      "description": "Awaiting maintainer evaluation."
+    },
+    {
+      "name": "needs-info",
+      "color": "D4C5F9",
+      "description": "Reporter must supply missing details before this can be triaged."
+    },
+    {
+      "name": "ready-for-agent",
+      "color": "0E8A16",
+      "description": "Fully specified and delegable to automation. The Sandcastle daemon picks these up."
+    },
+    {
+      "name": "ready-for-human",
+      "color": "0052CC",
+      "description": "Requires human judgment or external access; not suitable for an agent."
+    },
+    {
+      "name": "wontfix",
+      "color": "FFFFFF",
+      "description": "Rejected; no action planned."
+    }
+  ],
+  "agentStates": [
+    {
+      "name": "agent-working",
+      "color": "FBCA04",
+      "description": "Sandcastle agent is currently running against this issue."
+    },
+    {
+      "name": "agent-pr-open",
+      "color": "1D76DB",
+      "description": "Sandcastle opened a PR for this issue. Awaiting review/merge."
+    },
+    {
+      "name": "agent-failed",
+      "color": "B60205",
+      "description": "Sandcastle run errored or produced no commits. Relabel to ready-for-agent to retry."
+    }
+  ]
+}
