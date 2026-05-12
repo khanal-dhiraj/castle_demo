@@ -33,6 +33,12 @@ jobs:
       - name: Build sandcastle Docker image
         run: npx sandcastle docker build-image
 
+      # sandcastle's env resolver only forwards keys *declared* in .sandcastle/.env
+      # into the sandbox. .env is gitignored, so on CI we stage it from .env.example
+      # (empty values declare the keys; resolver falls back to process.env).
+      - name: Stage .sandcastle/.env for sandbox env passthrough
+        run: cp .sandcastle/.env.example .sandcastle/.env
+
       - name: Run orchestrator
         run: npx tsx .sandcastle/main.mts
         env:
