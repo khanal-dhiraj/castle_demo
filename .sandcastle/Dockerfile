@@ -36,6 +36,17 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 # Add Claude to PATH
 ENV PATH="/home/agent/.local/bin:$PATH"
 
+# Prebake Matt Pocock's TDD + architecture-review skills into ~/.claude/skills
+# so the implementer (/tdd) and reviewer (/improve-codebase-architecture) can
+# slash-invoke them without a runtime install. Runs as the agent user — files
+# land in /home/agent/.claude/skills with agent ownership.
+RUN npx -y skills@latest add mattpocock/skills \
+  --global \
+  --agent claude-code \
+  --skill tdd \
+  --skill improve-codebase-architecture \
+  --yes
+
 WORKDIR /home/agent
 
 # In worktree sandbox mode, Sandcastle bind-mounts the git worktree at /home/agent/workspace
