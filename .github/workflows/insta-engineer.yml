@@ -39,6 +39,14 @@ jobs:
       - name: Stage .sandcastle/.env for sandbox env passthrough
         run: cp .sandcastle/.env.example .sandcastle/.env
 
+      - name: DEBUG — verify secret lengths (no values printed)
+        run: |
+          echo "ANTHROPIC_API_KEY length=${#ANTHROPIC_API_KEY}  (expected 108)"
+          echo "GH_TOKEN length=${#GH_TOKEN}  (expected 40)"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
       - name: Run orchestrator
         run: npx tsx .sandcastle/main.mts
         env:
