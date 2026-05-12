@@ -26,12 +26,9 @@ Pay extra attention to test files that touch the relevant parts of the code.
 
 # EXECUTION
 
-If applicable, use RGR to complete the task.
+Use the `/tdd` skill to drive the inner red-green-refactor loop. Let the skill run — do not hand-roll RGR steps.
 
-1. RED: write one test
-2. GREEN: write the implementation to pass that test
-3. REPEAT until done
-4. REFACTOR the code
+After each green step, pause and ask: *is this interface deep (lots of behavior behind a narrow surface)?* If the test you just wrote required 3+ mocks, redesign the interface before continuing — that is a signal the module is shallow.
 
 # FEEDBACK LOOPS
 
@@ -53,7 +50,7 @@ Keep it concise.
 
 If the task is not complete, leave a comment on the issue with what was done.
 
-Do not close the issue - this will be done later.
+Do not close the issue - this will be done later by the merger.
 
 Once complete, output <promise>COMPLETE</promise>.
 

@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo 'No tests yet (project-specific)' && exit 0",
+    "typecheck": "echo 'No typecheck configured' && exit 0"
   },
   "repository": {
     "type": "git",
