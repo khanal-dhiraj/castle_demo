@@ -5,6 +5,9 @@ RUN apt-get update && apt-get install -y \
   git \
   curl \
   jq \
+  python3 \
+  python3-pip \
+  python3-venv \
   && rm -rf /var/lib/apt/lists/*
 
 # Install GitHub CLI
@@ -33,8 +36,19 @@ USER ${AGENT_UID}:${AGENT_GID}
 # Install Claude Code CLI
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
-# Add Claude to PATH
-ENV PATH="/home/agent/.local/bin:$PATH"
+# Pre-create a Python venv with the SSG's runtime + test dependencies. Pre-installing
+# means the bind-mounted workspace doesn't need a fresh `pip install` on every run,
+# and putting the venv first on PATH makes `pip`/`pytest` use it implicitly.
+RUN python3 -m venv /home/agent/.venv \
+  && /home/agent/.venv/bin/pip install --no-cache-dir \
+    'markdown-it-py>=3.0' \
+    'python-frontmatter>=1.1' \
+    'jinja2>=3.1' \
+    'pygments>=2.17' \
+    'pytest>=8.0'
+
+# Venv first so `pip`/`pytest` resolve there; Claude Code CLI second.
+ENV PATH="/home/agent/.venv/bin:/home/agent/.local/bin:$PATH"
 
 WORKDIR /home/agent
 

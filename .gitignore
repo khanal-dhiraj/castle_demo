@@ -16,6 +16,16 @@ node_modules/
 .sandcastle/logs/
 .sandcastle/worktrees/
 
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+
+# Insta-Engineer build output
+dist/
+
 # OS / editor
 .DS_Store
 .vscode/
