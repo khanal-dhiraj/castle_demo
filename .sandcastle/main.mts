@@ -43,7 +43,12 @@ export async function runIssue(issue: Issue) {
   });
 }
 
-/** Fetch the oldest open issue carrying the given label. Returns null if none. */
+/** Fetch the oldest open issue carrying the given label. Returns null if none.
+ *
+ * `gh issue list` returns newest-first by default, so we fetch a batch and
+ * pick the lowest-numbered one. Issue numbers are monotonic in GitHub, so
+ * the lowest number is the oldest issue.
+ */
 export function pickOldestIssueWithLabel(label: string): Issue | null {
   const json = execFileSync(
     "gh",
@@ -57,12 +62,14 @@ export function pickOldestIssueWithLabel(label: string): Issue | null {
       "--json",
       "number,title,body",
       "--limit",
-      "1",
+      "100",
     ],
     { encoding: "utf8" },
   );
   const issues = JSON.parse(json) as Issue[];
-  return issues[0] ?? null;
+  if (issues.length === 0) return null;
+  issues.sort((a, b) => a.number - b.number);
+  return issues[0];
 }
 
 // CLI entry: one-shot picker, useful for manual runs / smoke tests.
