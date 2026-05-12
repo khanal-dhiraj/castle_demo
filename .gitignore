@@ -1,3 +1,22 @@
 node_modules/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*_rsa
+*_rsa.pub
+.npmrc
+.netrc
+
+# Sandcastle
 .sandcastle/.env
 .sandcastle/logs/
+.sandcastle/worktrees/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
