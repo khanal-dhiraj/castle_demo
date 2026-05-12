@@ -1,26 +1,60 @@
-// Smoke test — one agent, one sandbox, one tiny task.
+// Single-issue runner: pick the oldest open Sandcastle-labeled issue,
+// run one agent on it, commit on its own branch.
 // Usage: npx tsx .sandcastle/main.mts
 
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
+import { execSync } from "node:child_process";
 
+// 1. Fetch the oldest open issue with the Sandcastle label.
+const issuesJson = execSync(
+  `gh issue list --state open --label Sandcastle --json number,title,body --limit 1`,
+  { encoding: "utf8" },
+);
+const [issue] = JSON.parse(issuesJson) as {
+  number: number;
+  title: string;
+  body: string;
+}[];
+
+if (!issue) {
+  console.error("No open Sandcastle-labeled issues. Create one and rerun.");
+  process.exit(1);
+}
+
+const branch = `sandcastle/issue-${issue.number}`;
+console.log(`Picked issue #${issue.number}: ${issue.title}`);
+console.log(`Working on branch: ${branch}\n`);
+
+// 2. Run one agent on its own branch.
 const result = await sandcastle.run({
-  agent: sandcastle.claudeCode("claude-sonnet-4-6"),
+  agent: sandcastle.claudeCode("claude-opus-4-7"), // always use claude-opus-4-7 
   sandbox: docker(),
-  branchStrategy: { type: "branch", branch: "sandcastle/hello-demo" },
-  name: "hello-demo",
+  branchStrategy: { type: "branch", branch },
+  name: `issue-${issue.number}`,
   prompt: [
-    "Create a file named hello.txt in the current directory.",
-    "Its contents should be a single line: a friendly one-sentence greeting from the agent.",
-    "Then run `git add hello.txt && git commit -m 'add hello.txt'`.",
-    "When the commit is done, output <promise>COMPLETE</promise> on its own line.",
+    `# Task`,
+    `Implement GitHub issue #${issue.number} on this branch.`,
+    ``,
+    `## Issue title`,
+    issue.title,
+    ``,
+    `## Issue body`,
+    issue.body || "(no body)",
+    ``,
+    `## Rules`,
+    `- Read the repo structure first. It is a fresh TypeScript repo.`,
+    `- Add only what the issue requires; do not invent unrelated scaffolding.`,
+    `- If you create tests, run them and ensure they pass before committing.`,
+    `- Make ONE git commit per logical change, with a clear message.`,
+    `- When done, output <promise>COMPLETE</promise> on its own line.`,
   ].join("\n"),
-  // Default file logging writes to .sandcastle/logs/<run>.log
+  maxIterations: 30, // give it room to read, edit, test, iterate
 });
 
 console.log("\n--- Run result ---");
 console.log("Branch:           ", result.branch);
-console.log("Iterations:       ", result.iterations.length);
+console.log("Iterations used:  ", result.iterations.length);
 console.log("Completion signal:", result.completionSignal);
-console.log("Commits:          ", result.commits);
+console.log("Commits:          ", result.commits.map((c) => c.sha));
 console.log("Log file:         ", result.logFilePath);
