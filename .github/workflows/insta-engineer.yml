@@ -62,10 +62,12 @@ jobs:
       - name: DEBUG — inspect sandbox image for stale claude state + try claude --print directly
         run: |
           docker run --rm \
+            --entrypoint bash \
             -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
             sandcastle:castle_demo \
-            bash -c '
+            -c '
               echo "--- ~/.claude listing ---"; ls -la ~/.claude/ 2>&1 || true
+              echo "--- find ~/.claude (non-skills) ---"; find ~/.claude -maxdepth 2 -not -path "*skills*" 2>&1 || true
               echo "--- settings.json contents ---"; cat ~/.claude/settings.json 2>&1 || true
               echo "--- .credentials.json contents ---"; cat ~/.claude/.credentials.json 2>&1 || true
               echo "--- claude --version ---"; claude --version 2>&1
