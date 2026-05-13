@@ -30,7 +30,7 @@ gh auth setup-git
    where the body starts with `Closes #<id>` (GitHub then auto-closes the
    issue when the PR merges) and includes a short summary of what changed.
 3. Swap the issue's labels so the planner skips it on the next run:
-   `gh issue edit <id> --remove-label ready-for-agent --add-label agent-pr-open`
+   `gh issue edit <id> --remove-label insta-engineer --add-label agent-pr-open`
 
 Do NOT run `git merge`. Do NOT run `gh issue close` — the `Closes #<id>`
 keyword in the PR body handles that automatically on merge.

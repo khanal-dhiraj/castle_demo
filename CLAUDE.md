@@ -27,7 +27,7 @@ Secrets live in `.sandcastle/.env` (`ANTHROPIC_API_KEY`, `GH_TOKEN`). `.sandcast
 
 1. **Plan** — one Opus agent reads `gh issue list --label Sandcastle`, builds a dependency graph, and emits a `<plan>{...}</plan>` JSON block listing only *unblocked* issues with assigned branch names (`sandcastle/issue-{id}-{slug}`). The orchestrator parses that tag — if it's missing, the run throws.
 2. **Execute + Review** — each issue runs in its own Docker sandbox via `sandcastle.createSandbox({ branch, ... })`, concurrently under `Promise.allSettled`. Inside each sandbox: implementer (up to 100 iterations) commits to the issue's branch, then if any commits were made, a reviewer (1 iteration) refines on the same branch. `copyToWorktree: ["node_modules"]` skips reinstalling deps per worktree.
-3. **Open PR** — a single merger agent on the host branch pushes every branch that produced commits to `origin` and opens a PR per branch with a `Closes #<id>` body. It also swaps the issue's `ready-for-agent` label for `agent-pr-open` so the planner skips it on the next run. Issues auto-close when humans merge the PR.
+3. **Open PR** — a single merger agent on the host branch pushes every branch that produced commits to `origin` and opens a PR per branch with a `Closes #<id>` body. It also swaps the issue's `insta-engineer` label for `agent-pr-open` so the planner skips it on the next run. Issues auto-close when humans merge the PR.
 
 The outer loop repeats so that issues unblocked by a prior merge get picked up next round. The loop exits early when the planner returns zero issues.
 
@@ -36,7 +36,7 @@ The outer loop repeats so that issues unblocked by a prior merge get picked up n
 - `plan-prompt.md` — defines the blocking rules and the `<plan>` output contract `main.mts` parses.
 - `implement-prompt.md` — required commit prefix is `RALPH:`; agent must emit `<promise>COMPLETE</promise>` when done; must not close the issue (`Closes #<id>` in the PR body does that on merge).
 - `review-prompt.md` — loads `@.sandcastle/CODING_STANDARDS.md` so the standards apply at review time only (saves tokens during implementation). Review commits prefix is `RALPH: Review -`.
-- `merge-prompt.md` — `{{BRANCHES}}` and `{{ISSUES}}` are templated from `main.mts`. The merger runs `gh auth setup-git` (so `git push` over HTTPS uses `$GH_TOKEN`), then per branch: pushes to `origin`, opens a PR with `Closes #<id>` in the body, and relabels the issue `ready-for-agent` → `agent-pr-open`.
+- `merge-prompt.md` — `{{BRANCHES}}` and `{{ISSUES}}` are templated from `main.mts`. The merger runs `gh auth setup-git` (so `git push` over HTTPS uses `$GH_TOKEN`), then per branch: pushes to `origin`, opens a PR with `Closes #<id>` in the body, and relabels the issue `insta-engineer` → `agent-pr-open`.
 
 When changing prompts, keep the contracts `main.mts` depends on: the `<plan>` tag and `issues[].{id,title,branch}` shape, the `RALPH:` commit prefix, and the merger's `<promise>COMPLETE</promise>` terminator.
 
