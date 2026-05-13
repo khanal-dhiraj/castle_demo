@@ -59,6 +59,23 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
+      - name: DEBUG — inspect sandbox image for stale claude state + try claude --print directly
+        run: |
+          docker run --rm \
+            -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+            sandcastle:castle_demo \
+            bash -c '
+              echo "--- ~/.claude listing ---"; ls -la ~/.claude/ 2>&1 || true
+              echo "--- settings.json contents ---"; cat ~/.claude/settings.json 2>&1 || true
+              echo "--- .credentials.json contents ---"; cat ~/.claude/.credentials.json 2>&1 || true
+              echo "--- claude --version ---"; claude --version 2>&1
+              echo "--- ANTHROPIC_API_KEY length (in container) ---"; echo "len=${#ANTHROPIC_API_KEY}"
+              echo "--- claude --print test ---"
+              echo "say hi in one word" | claude --print --model claude-haiku-4-5 -p - 2>&1 | head -30
+            '
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
       - name: Run orchestrator
         run: npx tsx .sandcastle/main.mts
         env:
